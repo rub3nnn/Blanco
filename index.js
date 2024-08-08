@@ -32,7 +32,7 @@ function generateRoomCode() {
 io.on('connection', (socket) => {
     const userId = uuidv4();
     socket.userId = userId;
-    console.log('a user connected');
+    //console.log('a user connected');
     socket.currentRoom = null; 
 
     // Función para actualizar y enviar la lista de jugadores
@@ -51,7 +51,7 @@ io.on('connection', (socket) => {
         socket.currentRoom = roomCode;
         socket.join(roomCode);
         socket.emit('roomCreated', { code: roomCode, user: userId, username: socket.username });
-        console.log(`Room created with code: ${roomCode}`);
+        console.log(`${username} ha creado la sala: ${roomCode}`);
         updatePlayerList(roomCode); // Enviar lista de jugadores al crear sala
     });
 
@@ -77,21 +77,23 @@ io.on('connection', (socket) => {
             socket.currentRoom = data.code;
             socket.emit('joinedRoom', { success: true, code: data.code, user: userId });
             io.to(data.code).emit('playerJoinedRoom', { user: userId, username: socket.username });
-            console.log(`User joined room: ${data.code}`);
+            console.log(`${socket.username} se ha unido a la sala: ${data.code}`);
             updatePlayerList(data.code); // Enviar lista de jugadores al unirse a la sala
             }else{
                 socket.emit('joinedRoom', { success: false, msg: "Esperando a la siguiente ronda para unirte", errorcode: 2 });
+                console.log(`${socket.username} está pendiente para entrar a la sala ${data.code}.`);
                 waitstatus(data.code).then((emitdata)=>{
                     rooms[data.code].players.push({ userId, username: socket.username, role: 'player' });
                     socket.join(data.code);
                     socket.currentRoom = data.code;
                     socket.emit('joinedRoom', { success: true, code: data.code, user: userId, emitdata });
                     io.to(data.code).emit('playerJoinedRoom', { user: userId, username: socket.username });
-                    console.log(`User joined room: ${data.code}`);
+                    console.log(`${socket.username} se ha unido a la sala: ${data.code}`);
                     updatePlayerList(data.code); // Enviar lista de jugadores al unirse a la sala
                 })
             }
         } else {
+            console.log(`${socket.username} ha intentado unirse a la sala ${data.code} pero no existe.`);
             socket.emit('joinedRoom', { success: false, msg: "Esa sala no existe", errorcode: 0 });
         }
     });
@@ -103,57 +105,45 @@ io.on('connection', (socket) => {
 
     socket.on('words', (data) => {
         const { roomCode, word, order } = data;
-        if(word){
-            if(rooms[roomCode].words){
-                rooms[roomCode].words.push(word)
-            }else{
+    
+        if (!rooms[roomCode]) return; // Asegurarse de que la sala existe
+    
+        if (word) {
+            if (!rooms[roomCode].words) {
                 rooms[roomCode].words = [];
+            }
+    
+            // Evitar palabras duplicadas del mismo jugador
+            if (!rooms[roomCode].words.includes(word)) {
                 rooms[roomCode].words.push(word);
+                console.log(`${socket.username} en la sala ${roomCode}, ha introducido la palabra ${word}.`);
             }
         }
-        if(rooms[roomCode].words.length >= 1){
-        if((rooms[roomCode].settings.wordwrite === "all" && rooms[roomCode].players.length === rooms[roomCode].words.length) || (rooms[roomCode].settings.wordwrite === "onlyleader" && rooms[roomCode].words.length === 1) || order === "continue"){
-            
-            const players = rooms[roomCode].players;
-            const blancos = rooms[roomCode].settings.blanconumber; // Número de jugadores blancos que necesitas
-            const selectedBlancos = [];
-            const randomword = rooms[roomCode].words[Math.floor(Math.random() * rooms[roomCode].words.length)];
-            while (selectedBlancos.length < blancos) {
-                const randomPlayer = players[Math.floor(Math.random() * players.length)];
-                if (!selectedBlancos.includes(randomPlayer) && !(rooms[roomCode].settings.wordwrite === "onlyleader" && randomPlayer.role === "leader") ) {
-                    selectedBlancos.push(randomPlayer);
-                }
-            }
-            rooms[roomCode].words = rooms[roomCode].words.filter(p => p !== randomword);
-            rooms[roomCode].gamestatus = "receivewords"
-            let emitdata = { 
-                state: "receivewords", 
-                data: {
-                    word: randomword, 
-                    blancos: selectedBlancos 
-                }
-            }
-            io.to(roomCode).emit('game', emitdata);
-            evento.emit(roomCode, emitdata);
+    
+        // Cambiar el estado del juego a "waitingForWords" si es necesario
+        if (rooms[roomCode].gamestatus !== "receivewords") {
+            rooms[roomCode].gamestatus = "waitingForWords";
         }
-        }else{
-            rooms[roomCode].gamestatus = "end"
-            io.to(roomCode).emit('game', { 
-                state: "end"
-            });
+    
+        // Comprobar si se han recibido todas las palabras
+        const playersCount = rooms[roomCode].players.length;
+        const wordsCount = rooms[roomCode].words.length;
+        const allWordsReceived = (rooms[roomCode].settings.wordwrite === "all" && playersCount === wordsCount);
+        const leaderOnlyReceived = (rooms[roomCode].settings.wordwrite === "onlyleader" && wordsCount === 1);
+        const shouldContinue = (order === "continue") || allWordsReceived || leaderOnlyReceived;
+    
+        if (shouldContinue) {
+            continueGame(roomCode); // Llamada a la función `continueGame` para avanzar el juego
         }
-        
     });
 
     socket.on('gamestatus', (data) => {
-        console.log(data)
         const { roomCode, gamedata } = data;
         rooms[roomCode].gamestatus = gamedata.state
         if(gamedata.state === "start"){
             rooms[roomCode].settings = gamedata.data
         }
         io.to(roomCode).emit('game', gamedata);
-        console.log( rooms[roomCode].settings)
     });
 
     socket.on('kickPlayer', (data) => {
@@ -173,37 +163,96 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log('user disconnected ' + userId);
         
+        if(socket.username){
+            console.log(socket.username + "("+ userId + ") se ha desconectado" );
+        }else{
+           // console.log( userId + " se ha desconectado" );
+        }
+    
         const currentRoom = socket.currentRoom;
-        // Guardar el valor de prevRoom antes de cualquier modificación
-        const originalPrevRoom = rooms[currentRoom] ? { ...rooms[currentRoom] } : null;
-        
         if (currentRoom && rooms[currentRoom]) {
+            const currentPlayer = rooms[currentRoom].players.find(p => p.userId === userId);
+    
+            // Remover al jugador de la lista de jugadores
             rooms[currentRoom].players = rooms[currentRoom].players.filter(p => p.userId !== userId);
+    
             if (rooms[currentRoom].players.length === 0) {
                 delete rooms[currentRoom];
             } else {
-                const currentPlayer = originalPrevRoom.players.filter(p => p.userId === userId);
-                console.log(originalPrevRoom.players);
-                console.log(userId);
-                if (currentPlayer[0].role === 'leader') {
-                    rooms[currentRoom].players.filter(p => p.userId !== userId).forEach(player => {
+                if (currentPlayer.role === 'leader') {
+                    // Si el líder se desconecta, expulsar a todos y eliminar la sala
+                    rooms[currentRoom].players.forEach(player => {
                         io.to(currentRoom).emit('kicked', { user: player.userId, username: player.username, msg: "El líder se ha desconectado" });
                     });
                     delete rooms[currentRoom];
-                } else {  
+                } else {
+                    // Si no es líder, simplemente notificar a los demás jugadores
                     io.to(currentRoom).emit('exitRoom', { user: userId, username: socket.username });
                 }
-                
+    
                 updatePlayerList(currentRoom); // Enviar lista de jugadores al salir de la sala
+                
+                // Comprobar si el juego estaba esperando palabras y el jugador que se desconectó aún no había enviado la suya
+                if (rooms[currentRoom].gamestatus === 'waitingForWords') {
+                    const pendingPlayers = rooms[currentRoom].players.length - rooms[currentRoom].words.length;
+    
+                    // Si todos los jugadores restantes han enviado sus palabras, continuar el juego
+                    if (pendingPlayers <= 0) {
+                        continueGame(currentRoom);
+                    }
+                }
             }
         }
     });
     
+    function continueGame(roomCode) {
+        if (!rooms[roomCode]) return;
+    
+        // Comprobar si hay palabras restantes
+        if (rooms[roomCode].words.length === 0) {
+            // No hay más palabras, el juego debe finalizar
+            rooms[roomCode].gamestatus = "end";
+            io.to(roomCode).emit('game', { state: "end" });
+            return;
+        }
+    
+        const players = rooms[roomCode].players;
+        const blancos = rooms[roomCode].settings.blanconumber;
+        const selectedBlancos = [];
+        const randomword = rooms[roomCode].words[Math.floor(Math.random() * rooms[roomCode].words.length)];
+    
+        // Seleccionar jugadores blancos
+        while (selectedBlancos.length < blancos) {
+            const randomPlayer = players[Math.floor(Math.random() * players.length)];
+            if (!selectedBlancos.includes(randomPlayer) && !(rooms[roomCode].settings.wordwrite === "onlyleader" && randomPlayer.role === "leader")) {
+                selectedBlancos.push(randomPlayer);
+            }
+        }
+    
+        // Eliminar la palabra seleccionada de la lista de palabras
+        rooms[roomCode].words = rooms[roomCode].words.filter(p => p !== randomword);
+    
+        // Actualizar el estado del juego y emitir los datos correspondientes
+        rooms[roomCode].gamestatus = "receivewords";
+        let emitdata = { 
+            state: "receivewords", 
+            data: {
+                word: randomword, 
+                blancos: selectedBlancos 
+            }
+        };
+    
+        io.to(roomCode).emit('game', emitdata);
+        evento.emit(roomCode, emitdata);
+    }
+    
+    
+    
 
     socket.on('leaveRoom', () => {
         const currentRoom = socket.currentRoom;
+        console.log(socket.username + " ha abandonado la sala " + currentRoom );
         // Guardar el valor de prevRoom antes de cualquier modificación
         const originalPrevRoom = rooms[currentRoom] ? { ...rooms[currentRoom] } : null;
         

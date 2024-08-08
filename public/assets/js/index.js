@@ -84,12 +84,14 @@ function writeword() {
                 <button id="continueword" style="margin-top: 7px;">CONTINUAR</button>
                 `;
         document.getElementById("continueword").addEventListener('click', (event) => {
-            resolve(document.getElementById("wordinput").value)
+            if(document.getElementById("wordinput").value){
+                resolve(document.getElementById("wordinput").value)
             gamesection.innerHTML = `
                 <div class="contextcontainer">
                     <p class="subtext">ESPERANDO A QUE TODOS ENVÍEN SU PALABRA</p>
                 </div>
                 `;
+            }
         });
     });
 

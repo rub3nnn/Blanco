@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo y Texto</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="/api/jquery.min.js"></script>
+    <script type="text/javascript" src="/api/qrcode.js"></script>
+</head>
+<body>
+    <div class="bottombar" id="bottombar">
+        <div class="topdiv">
+            <p id="topbartext">Partida normal</p>
+            <i class="fa-solid fa-x" onclick="togglebar()"></i>
+        </div>
+        <div class="normalbar" id="normalbar">
+            
+        </div>
+    </div>
+    
+    <div id="frontpage">
+        <img src="/assets/img/logo.png" alt="Logo" class="logo">
+        <p class="text">BLANCO</p>
+        <p class="subtext">MILMARCOS EDITION</p>
+        <div class="front">
+            <div class="alertcontainer mainbutton" id="alert">
+                <p class="subtext" id="alerttext"></p>
+            </div>
+            <button class="frontbutton mainbutton" id="create">CREAR PARTIDA</button>
+            <button class="button mainbutton" id="join" style="margin-top: 7px;">UNIRSE A PARTIDA</button>
+            <button class="bottomsettings" id="changenameButton">
+                <i class="fa-regular fa-pen-to-square"></i>
+            </button>
+        </div>
+        <div class="content">
+            <div class="loader-container" id="loader">
+                <div class="loader"></div>
+            </div>
+                
+            <div id="namesection" class="duringsection">
+                <div class="namealertcontainer" id="namealert">
+                    <p class="subtext" id="namealerttext"></p>
+                </div>
+                <input type="text" id="nameInput" placeholder="Nombre de jugador">
+                <button id="savename" style="margin-top: 7px;">GUARDAR</button>
+            </div>
+            <div id="gamesection" class="duringsection">
+                
+            </div>
+            <div id="createsection" class="duringsection">
+                <div class="settingscontainer" id="hostsettings">
+                    <button onclick="settings()"><i class="fa-solid fa-gear"></i></button>
+                    <button onclick="confirmleave()"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+                </div>
+                <div class="settingscontainer player" id="playersettings"> 
+                    <button onclick="confirmleave()"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+                </div>
+                <div class="indcontainer">
+                    <p class="text" id="createroomcode">----</p>
+                    <p class="subtext">CÓDIGO DE ACCESO</p>
+                </div>
+                <button class="normalbutton" onclick="shareLink()">COMPARTIR</button>
+                <div class="playerscontainer">
+                    <p class="subtext" id="waitingplayers">Esperando jugadores...</p>
+                    <div id="playerscontainer"></div>
+                </div>
+                <div class="indcontainer" style="padding: 10px;">
+                        <div id="qrcode"></div>
+                </div>
+            </div>
+        
+            <div id="joinsection" class="duringsection">
+                <div class="indcontainer" style="padding: 10px;">
+                    <p class="subtext">CÓDIGO DE ACCESO</p>
+                    <p class="errortext" id="errortext"></p>
+                </div>
+                <form id="codeForm">
+                    <input class="code" type="number" id="num1" maxlength="1" >
+                    <input class="code" type="number" id="num2" maxlength="1">
+                    <input class="code" type="number" id="num3" maxlength="1">
+                    <input class="code" type="number" id="num4" maxlength="1">
+                </form>
+                <button class="button" id="joinback" onclick="back()">Volver</button>
+            </div>
+        </div>
+    </div>    
+    
+    <div class="area" >
+        <ul class="circles">
+                <li></li>
+                <li></li>
+                <li></li>
+                <li></li>
+                <li></li>
+                <li></li>
+                <li></li>
+                <li></li>
+                <li></li>
+                <li></li>
+        </ul>
+    </div>
+</body>
+<script src="/assets/js/index.js"></script>
+</html>

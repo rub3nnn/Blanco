@@ -80,6 +80,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('gamestatus', (data) => {
+        console.log(data)
         const { roomCode, gamedata } = data;
         io.to(roomCode).emit('game', gamedata);
     });

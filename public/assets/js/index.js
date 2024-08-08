@@ -2,7 +2,7 @@ const socket = io();
 
 
 let currentRoom = '';
-let roomsettings = [];
+let roomsettings = {};
 roomsettings.wordwrite = "all";
 roomsettings.blanconumber = 1;
 
@@ -35,6 +35,7 @@ function joinRoom(code, name) {
 }
 
 function sendGamestatus(data) {
+    console.log({ roomCode: currentRoom, gamedata: data })
     socket.emit('gamestatus', { roomCode: currentRoom, gamedata: data });
 }
 
@@ -65,10 +66,20 @@ function writeword() {
                 <div class="contextcontainer">
                     <p class="subtext">ESCRIBE UNA PALABRA PARA EL JUEGO</p>
                 </div>
-                <input type="text" id="nameInput" placeholder="Escribe aquí...">
-                <button id="savename" style="margin-top: 7px;">CONTINUAR</button>
+                <input type="text" id="wordinput" placeholder="Escribe aquí...">
+                <button id="continueword" style="margin-top: 7px;">CONTINUAR</button>
                 `;
+        document.getElementById("continueword").addEventListener('click', (event) => {
+            resolve(document.getElementById("wordinput").value)
+            gamesection.innerHTML = `
+                <div class="contextcontainer">
+                    <p class="subtext">ESPERANDO A QUE TODOS ENVÍEN SU PALABRA</p>
+                </div>
+                `;
+        });
     });
+
+    
 }
 
 socket.on('game', (data) => {
@@ -88,11 +99,11 @@ socket.on('game', (data) => {
             console.log(data.wordwrite)
             if(data.data.wordwrite === "all"){
                 writeword().then((word)=>{
-                    
+                    alert(word)
                 })
             }else if(data.data.wordwrite === "onlyleader" && role === 'leader'){
                 writeword().then((word)=>{
-
+                    alert(word)
                 })
             }else{
                 gamesection.innerHTML = `

@@ -139,6 +139,12 @@ body {
     width: 80%;
 }
 
+.secondtitle{
+    font-size: 21px;
+    font-weight: 600;
+    color: #333;
+}
+
 .contextcontainer{
     margin: 10px auto 10px auto;
     padding: 10px;
@@ -643,4 +649,19 @@ input[type="number"]::-webkit-inner-spin-button {
 
 #gamesection{
     display: none;
+}
+
+#skipround{
+    display: none;
+}
+
+.skipround{
+    width: 160px !important;
+}
+
+.skipround button{
+    width: 100%;
+}
+#mainalert{
+    z-index: 9999;
 }

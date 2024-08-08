@@ -3,6 +3,8 @@ const path = require('path');
 const http = require('http');
 const socketIo = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
+const EventEmitter = require('events');
+const evento = new EventEmitter();
 
 const app = express();
 const server = http.createServer(app);
@@ -53,15 +55,23 @@ io.on('connection', (socket) => {
         updatePlayerList(roomCode); // Enviar lista de jugadores al crear sala
     });
 
+    function waitstatus(code) {
+        return new Promise((resolve) => {
+            evento.once(code, (emitdata) => {
+                resolve(emitdata);
+            });
+        });
+    }
+
     socket.on('joinRoom', (data) => {
         socket.username = data.username;
         if (rooms[data.code]) {
-            // Comprobar si ya existe un usuario con el mismo nombre en la sala
             const usernameExists = rooms[data.code].players.some(player => player.username === socket.username);
             if (usernameExists) {
                 socket.emit('joinedRoom', { success: false, msg: "Ya hay un jugador con ese nombre de usuario en la sala", code: data.code, errorcode: 1 });
                 return;
             }
+            if(!rooms[data.code].gamestatus || rooms[data.code].gamestatus === "end"){
             rooms[data.code].players.push({ userId, username: socket.username, role: 'player' });
             socket.join(data.code);
             socket.currentRoom = data.code;
@@ -69,6 +79,18 @@ io.on('connection', (socket) => {
             io.to(data.code).emit('playerJoinedRoom', { user: userId, username: socket.username });
             console.log(`User joined room: ${data.code}`);
             updatePlayerList(data.code); // Enviar lista de jugadores al unirse a la sala
+            }else{
+                socket.emit('joinedRoom', { success: false, msg: "Esperando a la siguiente ronda para unirte", errorcode: 2 });
+                waitstatus(data.code).then((emitdata)=>{
+                    rooms[data.code].players.push({ userId, username: socket.username, role: 'player' });
+                    socket.join(data.code);
+                    socket.currentRoom = data.code;
+                    socket.emit('joinedRoom', { success: true, code: data.code, user: userId, emitdata });
+                    io.to(data.code).emit('playerJoinedRoom', { user: userId, username: socket.username });
+                    console.log(`User joined room: ${data.code}`);
+                    updatePlayerList(data.code); // Enviar lista de jugadores al unirse a la sala
+                })
+            }
         } else {
             socket.emit('joinedRoom', { success: false, msg: "Esa sala no existe", errorcode: 0 });
         }
@@ -79,10 +101,59 @@ io.on('connection', (socket) => {
         io.to(roomCode).emit('message', message);
     });
 
+    socket.on('words', (data) => {
+        const { roomCode, word, order } = data;
+        if(word){
+            if(rooms[roomCode].words){
+                rooms[roomCode].words.push(word)
+            }else{
+                rooms[roomCode].words = [];
+                rooms[roomCode].words.push(word);
+            }
+        }
+        if(rooms[roomCode].words.length >= 1){
+        if((rooms[roomCode].settings.wordwrite === "all" && rooms[roomCode].players.length === rooms[roomCode].words.length) || (rooms[roomCode].settings.wordwrite === "onlyleader" && rooms[roomCode].words.length === 1) || order === "continue"){
+            
+            const players = rooms[roomCode].players;
+            const blancos = rooms[roomCode].settings.blanconumber; // Número de jugadores blancos que necesitas
+            const selectedBlancos = [];
+            const randomword = rooms[roomCode].words[Math.floor(Math.random() * rooms[roomCode].words.length)];
+            while (selectedBlancos.length < blancos) {
+                const randomPlayer = players[Math.floor(Math.random() * players.length)];
+                if (!selectedBlancos.includes(randomPlayer) && !(rooms[roomCode].settings.wordwrite === "onlyleader" && randomPlayer.role === "leader") ) {
+                    selectedBlancos.push(randomPlayer);
+                }
+            }
+            rooms[roomCode].words = rooms[roomCode].words.filter(p => p !== randomword);
+            rooms[roomCode].gamestatus = "receivewords"
+            let emitdata = { 
+                state: "receivewords", 
+                data: {
+                    word: randomword, 
+                    blancos: selectedBlancos 
+                }
+            }
+            io.to(roomCode).emit('game', emitdata);
+            evento.emit(roomCode, emitdata);
+        }
+        }else{
+            rooms[roomCode].gamestatus = "end"
+            io.to(roomCode).emit('game', { 
+                state: "end"
+            });
+        }
+        
+    });
+
     socket.on('gamestatus', (data) => {
         console.log(data)
         const { roomCode, gamedata } = data;
+        rooms[roomCode].gamestatus = gamedata.state
+        if(gamedata.state === "start"){
+            rooms[roomCode].settings = gamedata.data
+        }
         io.to(roomCode).emit('game', gamedata);
+        console.log( rooms[roomCode].settings)
     });
 
     socket.on('kickPlayer', (data) => {
@@ -136,7 +207,7 @@ io.on('connection', (socket) => {
         // Guardar el valor de prevRoom antes de cualquier modificación
         const originalPrevRoom = rooms[currentRoom] ? { ...rooms[currentRoom] } : null;
         
-        if (currentRoom && rooms[currentRoom]) {
+        if (currentRoom && rooms[currentRoom] && originalPrevRoom.players.filter(p => p.userId === userId)[0]) {
             rooms[currentRoom].players = rooms[currentRoom].players.filter(p => p.userId !== userId);
             if (rooms[currentRoom].players.length === 0) {
                 delete rooms[currentRoom];

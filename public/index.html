@@ -37,6 +37,9 @@
             </button>
         </div>
         <div class="content">
+            <div class="namealertcontainer" id="mainalert">
+                <p class="subtext" id="mainalerttext"></p>
+            </div>
             <div class="loader-container" id="loader">
                 <div class="loader"></div>
             </div>
@@ -47,6 +50,9 @@
                 </div>
                 <input type="text" id="nameInput" placeholder="Nombre de jugador">
                 <button id="savename" style="margin-top: 7px;">GUARDAR</button>
+            </div>
+            <div class="settingscontainer skipround" id="skipround"> 
+                <button onclick="nextRound()"><p class="subtext">Siguiente ronda</p></button>
             </div>
             <div id="gamesection" class="duringsection">
                 

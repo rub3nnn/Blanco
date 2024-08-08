@@ -35,8 +35,11 @@ function joinRoom(code, name) {
 }
 
 function sendGamestatus(data) {
-    console.log({ roomCode: currentRoom, gamedata: data })
     socket.emit('gamestatus', { roomCode: currentRoom, gamedata: data });
+}
+
+function nextRound(){
+    socket.emit('words', {roomCode: currentRoom, word:"", order: "continue"})
 }
 
 function banPlayer(id) {
@@ -53,11 +56,22 @@ function leave() {
 }
 
 function gamestart(){
-    bottombar.style.bottom = '-500px';
-    sendGamestatus({
-        state: "start",
-        data: roomsettings
-    })
+    if(roomsettings.blanconumber >= playerlist.length){
+        document.getElementById("topbartext").innerText = "Aviso";
+        document.getElementById("normalbar").innerHTML = `
+                <div class="contextcontainer">
+                    <p class="subtext">NO SE HA PODIDO INICIAR LA PARTIDA. TIENE QUE HABER AL MENOS UN JUGADOR NORMAL.</p>
+                </div>
+                <button class="button" onclick="settings()" style="margin-top: 7px;">CAMBIAR AJUSTES</button>
+                `;
+        bottombar.style.bottom = '0';
+    }else{
+        bottombar.style.bottom = '-500px';
+        sendGamestatus({
+            state: "start",
+            data: roomsettings
+        })
+    }
 }
 
 function writeword() {
@@ -83,6 +97,10 @@ function writeword() {
 }
 
 socket.on('game', (data) => {
+    gamestatefunction(data)
+})
+
+function gamestatefunction(data){
     switch(data.state){
         case "start":
             gamesection.style.opacity = 0;
@@ -95,27 +113,64 @@ socket.on('game', (data) => {
                     gamesection.style.opacity = 1;
                 }, 300); 
             }, 300); 
-            console.log(data.data)
-            console.log(data.wordwrite)
             if(data.data.wordwrite === "all"){
                 writeword().then((word)=>{
-                    alert(word)
+                    socket.emit('words', {roomCode: currentRoom, word})
                 })
             }else if(data.data.wordwrite === "onlyleader" && role === 'leader'){
                 writeword().then((word)=>{
-                    alert(word)
+                    socket.emit('words', {roomCode: currentRoom, word, order: "start"})
                 })
             }else{
                 gamesection.innerHTML = `
                 <div class="contextcontainer">
-                    <p class="text">ESPERANDO A QUE EL LÍDER INTRODUZCA UNA PALABRA</p>
+                    <p class="subtext">ESPERANDO A QUE EL LÍDER INTRODUZCA UNA PALABRA</p>
                 </div>
                 `;
             }
             
         break;
+        case "receivewords":
+            if(role === "leader"){
+                document.getElementById("skipround").style.display = "flex";
+            }
+            if(role === "leader" && roomsettings.wordwrite === "onlyleader"){
+                gamesection.innerHTML = `
+                <div class="contextcontainer">
+                    <p class="text">JUEGO EN CURSO</p>
+                    <p class="subtext">PALABRA ACTUAL</p>
+                    <p class="subtext">${data.data.word}</p>
+                </div>
+                `;
+            }else if(data.data.blancos.some(user => user.userId === userId)){
+                gamesection.innerHTML = `
+                <p class="secondtitle">ERES BLANCO</p>
+                `;
+            }else{
+                gamesection.innerHTML = `
+                <p class="secondtitle">ERES UN JUGADOR NORMAL</p>
+                <div class="contextcontainer">
+                    <p class="subtext">LA PALABRA ES:</p>
+                    <p class="text">${data.data.word}</p>
+                </div>
+                `;
+            }
+        break;
+        case "end":
+            document.getElementById("skipround").style.display = "none";
+            gamesection.style.opacity = 0;
+            createsection.style.opacity = 0;
+            frontpage.classList.add("subcontainer");
+            setTimeout(function() {
+                createsection.style.display = "block";
+                gamesection.style.display = "none"
+                setTimeout(function() {
+                    createsection.style.opacity = 1;
+                }, 300); 
+            }, 300);     
+        break;
     }
-})
+}
 
 function updatePlayerList(players) {
     const playersContainer = document.getElementById("playerscontainer");
@@ -146,13 +201,12 @@ socket.on('roomCreated', (roomCode) => {
 });
 
 socket.on('playerListUpdate', (data) => {
+    window.playerlist = data.players;
     updatePlayerList(data.players);
-    console.warn(data)
 });
 
 function updatestartbutton(playersCount) {
     if (role === "leader") {
-        console.log(playersCount)
         if (playersCount > 1) {
             if(document.getElementById("waitingplayers")){
                 document.getElementById("waitingplayers").outerHTML = '<button class="button fullcontainer" style="color:#51a14c;" id="startgame" onclick="gamestart()">INICIAR</button>';
@@ -171,7 +225,6 @@ function getUser(id) {
         if(id != userId){
             bottombar.style.bottom = '0px';
             const user = document.getElementById(id).dataset;
-            console.log(user);
             document.getElementById("topbartext").innerText = user.username;
             document.getElementById("normalbar").innerHTML = `
                 <button class="normalbutton" onclick="banPlayer('${id}')">Expulsar</button>`
@@ -223,7 +276,7 @@ function settings(){
             <label class="switch-label">Todos los jugadores escriben las palabras</label>
         </div>
         <div class="switch-container">
-            <input type="number" ${returninput(roomsettings.blanconumber)}>
+            <input type="number" ${returninput(roomsettings.blanconumber)} onchange="setting(3,this)">
             <label class="switch-label">Blancos en la partida</label>
         </div>
     </div>
@@ -252,6 +305,7 @@ function setting(type, checkbox) {
             }
             break;
         case 3:
+                roomsettings.blanconumber = checkbox.value;
             break;
     }
 }
@@ -264,18 +318,40 @@ socket.on('joinedRoom', (roomCode) => {
         makeCode(roomCode.code);
         document.getElementById("waitingplayers").style.display = "none";
         loader.style.display = "none";
+        if(roomCode.emitdata !== undefined){
+            document.getElementById("mainalert").style.display = "none";
+            gamesection.style.opacity = 0;
+            createsection.style.opacity = 0;
+            frontpage.classList.remove("subcontainer");
+            setTimeout(function() {
+                createsection.style.display = "none";
+                gamesection.style.display = "block"
+                setTimeout(function() {
+                    gamesection.style.opacity = 1;
+                    gamestatefunction(roomCode.emitdata);
+                }, 300); 
+            }, 300); 
+            
+        }else{
         createsection.style.opacity = 1;
         createsection.style.display = "block";
+        
+        
+//        document.getElementsByClassName("playerscontainer")[0].style.paddingTop = '1px';
+        }
+        document.getElementById("createroomcode").innerText = roomCode.code;
         playersettings.style.display = "flex";
         hostsettings.style.display = "none";
-        document.getElementById("createroomcode").innerText = roomCode.code;
-//        document.getElementsByClassName("playerscontainer")[0].style.paddingTop = '1px';
     } else {
         switch (roomCode.errorcode) {
             case 1:
                 pedirNombre(roomCode.msg, true).then((nombre) => {
                     joinRoom(roomCode.code, nombre)
                 })
+                break;
+            case 2:
+                document.getElementById("mainalerttext").innerText = roomCode.msg;
+                document.getElementById("mainalert").style.display = "block";
                 break;
             default:
                 document.getElementById("errortext").innerText = roomCode.msg;
@@ -417,6 +493,7 @@ function pedirNombre(error, allowChange = false) {
 function back() {
     setfrontbuttons(2, 0)
     frontpage.classList.remove("subcontainer");
+    gamesection.style.opacity = 0;
     namesection.style.opacity = 0;
     createsection.style.opacity = 0;
     joinsection.style.opacity = 0;
@@ -429,6 +506,7 @@ function back() {
         document.getElementById("num3").value = "";
         document.getElementById("num4").value = "";
         setTimeout(function() {
+            gamesection.style.display = "none";
             createsection.style.display = "none";
             namesection.style.display = "none";
             joinsection.style.display = "none";

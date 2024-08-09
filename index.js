@@ -165,7 +165,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         
         if(socket.username){
-            console.log(socket.username + "("+ userId + ") se ha desconectado" );
+            console.log(socket.username + " se ha desconectado" );
         }else{
            // console.log( userId + " se ha desconectado" );
         }
@@ -194,14 +194,16 @@ io.on('connection', (socket) => {
                 updatePlayerList(currentRoom); // Enviar lista de jugadores al salir de la sala
                 
                 // Comprobar si el juego estaba esperando palabras y el jugador que se desconectó aún no había enviado la suya
-                if (rooms[currentRoom].gamestatus === 'waitingForWords') {
-                    const pendingPlayers = rooms[currentRoom].players.length - rooms[currentRoom].words.length;
-    
-                    // Si todos los jugadores restantes han enviado sus palabras, continuar el juego
-                    if (pendingPlayers <= 0) {
-                        continueGame(currentRoom);
+                if(rooms[currentRoom]){
+                    if (rooms[currentRoom].gamestatus === 'waitingForWords') {
+                        const pendingPlayers = rooms[currentRoom].players.length - rooms[currentRoom].words.length;
+        
+                        // Si todos los jugadores restantes han enviado sus palabras, continuar el juego
+                        if (pendingPlayers <= 0) {
+                            continueGame(currentRoom);
+                        }
                     }
-                }
+                } 
             }
         }
     });

@@ -1,6 +1,8 @@
-# Node + Express Service Starter
+# BLANCO
 
-This is a simple hello world express.js server.
+Un juego simple adaptado principalmente para dispositivos moviles.
+![blancophone](https://github.com/user-attachments/assets/46a3d58b-0986-4b89-8e0b-71f6d6b78726)
+
 
 ## Getting Started
 

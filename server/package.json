@@ -1,16 +1,16 @@
 {
-  "name": "node-express-web",
+  "name": "blanco-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "Blanco Game API Server - WebSocket & REST API",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js"
   },
-  "author": "",
+  "author": "Milmarcos Team",
   "license": "ISC",
   "dependencies": {
-    "ejs": "^3.1.9",
+    "cors": "^2.8.5",
     "events": "^3.3.0",
     "express": "^4.18.2",
     "http": "^0.0.1-security",

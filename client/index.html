@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BLANCO - MILMARCOS EDITION</title>
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+      integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <script src="https://cdn.socket.io/4.7.5/socket.io.js"></script>
+    <script type="text/javascript" src="./api/jquery.min.js"></script>
+    <script type="text/javascript" src="./api/qrcode.js"></script>
+    <script type="text/javascript" src="./config.js"></script>
+    <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+  </head>
+  <body>
+    <div class="bottombar" id="bottombar">
+      <div class="topdiv">
+        <p id="topbartext">Partida normal</p>
+        <i class="fa-solid fa-x" onclick="togglebar()"></i>
+      </div>
+      <div class="normalbar" id="normalbar"></div>
+    </div>
+
+    <div id="frontpage">
+      <img src="./assets/img/logo.png" alt="Logo" class="logo" />
+      <p class="text">BLANCO</p>
+      <p class="subtext">MILMARCOS EDITION</p>
+      <div class="front">
+        <div class="alertcontainer mainbutton" id="alert">
+          <p class="subtext" id="alerttext"></p>
+        </div>
+        <button class="frontbutton mainbutton" id="create">
+          CREAR PARTIDA
+        </button>
+        <button class="button mainbutton" id="join" style="margin-top: 7px">
+          UNIRSE A PARTIDA
+        </button>
+        <button
+          class="button mainbutton howtoplay"
+          id="howtoplay"
+          style="margin-top: 7px"
+        >
+          ¿CÓMO SE JUEGA?
+        </button>
+        <button class="bottomsettings" id="changenameButton">
+          <i class="fa-regular fa-pen-to-square"></i>
+        </button>
+      </div>
+      <div class="content">
+        <div class="namealertcontainer" id="mainalert">
+          <p class="subtext" id="mainalerttext"></p>
+        </div>
+        <div class="loader-container" id="loader">
+          <div class="loader"></div>
+          <div class="loader-message">
+            <p class="loader-title" id="loaderTitle">
+              Conectando al servidor...
+            </p>
+            <p class="loader-subtitle" id="loaderSubtitle">
+              La primera carga puede tardar hasta un minuto
+            </p>
+            <p class="loader-info" id="loaderInfo">Luego todo irá fluido</p>
+          </div>
+        </div>
+
+        <div id="namesection" class="duringsection">
+          <div class="namealertcontainer" id="namealert">
+            <p class="subtext" id="namealerttext"></p>
+          </div>
+          <input type="text" id="nameInput" placeholder="Nombre de jugador" />
+          <button id="savename" style="margin-top: 7px">GUARDAR</button>
+        </div>
+        <div class="settingscontainer skipround" id="skipround">
+          <button onclick="nextRound()">
+            <p class="subtext">Siguiente ronda</p>
+          </button>
+        </div>
+        <div id="gamesection" class="duringsection"></div>
+        <div id="createsection" class="duringsection">
+          <div class="settingscontainer" id="hostsettings">
+            <button onclick="settings()">
+              <i class="fa-solid fa-gear"></i>
+            </button>
+            <button onclick="confirmleave()">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </button>
+          </div>
+          <div class="settingscontainer player" id="playersettings">
+            <button onclick="confirmleave()">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </button>
+          </div>
+          <div class="indcontainer">
+            <p class="text" id="createroomcode">----</p>
+            <p class="subtext">CÓDIGO DE ACCESO</p>
+          </div>
+          <button class="normalbutton" onclick="shareLink()">COMPARTIR</button>
+          <div class="playerscontainer">
+            <p class="subtext" id="waitingplayers">Esperando jugadores...</p>
+            <div id="playerscontainer"></div>
+          </div>
+          <div class="indcontainer" style="padding: 10px">
+            <div id="qrcode"></div>
+          </div>
+        </div>
+
+        <div id="joinsection" class="duringsection">
+          <div class="indcontainer" style="padding: 10px">
+            <p class="subtext">CÓDIGO DE ACCESO</p>
+            <p class="errortext" id="errortext"></p>
+          </div>
+          <form id="codeForm">
+            <input class="code" type="number" id="num1" maxlength="1" />
+            <input class="code" type="number" id="num2" maxlength="1" />
+            <input class="code" type="number" id="num3" maxlength="1" />
+            <input class="code" type="number" id="num4" maxlength="1" />
+          </form>
+          <button class="button" id="joinback" onclick="back()">Volver</button>
+        </div>
+
+        <!-- How to Play Section -->
+        <div
+          id="howtoplaypage"
+          class="duringsection"
+          style="margin-top: -210px"
+        >
+          <div
+            class="settingscontainer"
+            id="howtoplayback"
+            style="display: flex"
+          >
+            <button onclick="backToHome()">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </button>
+          </div>
+
+          <div class="indcontainer">
+            <p class="text">¿CÓMO SE JUEGA?</p>
+            <p class="subtext">REGLAS DEL JUEGO</p>
+          </div>
+
+          <div class="indcontainer">
+            <h3 class="secondtitle">
+              <i class="fa-solid fa-users"></i> Objetivo del Juego
+            </h3>
+            <p class="subtext">
+              BLANCO es un juego de deducción social donde los jugadores deben
+              identificar quién es el "blanco" entre ellos mientras el blanco
+              intenta pasar desapercibido.
+            </p>
+          </div>
+
+          <div class="indcontainer">
+            <h3 class="secondtitle">
+              <i class="fa-solid fa-file-lines"></i> Preparación
+            </h3>
+            <p class="subtext">
+              <strong>1.</strong> Un jugador crea una partida y comparte el
+              código con los demás.
+            </p>
+            <p class="subtext">
+              <strong>2.</strong> Se necesitan al menos 3 jugadores para
+              comenzar.
+            </p>
+            <p class="subtext">
+              <strong>3.</strong> El anfitrión puede configurar el número de
+              "blancos" en la partida.
+            </p>
+          </div>
+
+          <div class="indcontainer">
+            <h3 class="secondtitle">
+              <i class="fa-solid fa-gamepad"></i> Mecánica del Juego
+            </h3>
+            <p class="subtext">
+              <strong>Jugadores Normales:</strong> Todos reciben la misma
+              palabra secreta.
+            </p>
+            <p class="subtext">
+              <strong>El/Los Blanco(s):</strong> NO reciben ninguna palabra,
+              solo ven "BLANCO".
+            </p>
+          </div>
+
+          <div class="indcontainer">
+            <h3 class="secondtitle">
+              <i class="fa-solid fa-comments"></i> Desarrollo de Rondas
+            </h3>
+            <p class="subtext">
+              <strong>1.</strong> En cada ronda, todos los jugadores deben decir
+              UNA palabra relacionada con la palabra secreta.
+            </p>
+            <p class="subtext">
+              <strong>2.</strong> Los jugadores normales intentan dar pistas
+              sutiles sin revelar la palabra directamente.
+            </p>
+            <p class="subtext">
+              <strong>3.</strong> El/Los blanco(s) deben escuchar atentamente e
+              intentar decir algo coherente sin ser descubiertos.
+            </p>
+            <p class="subtext">
+              <strong>4.</strong> Después de cada ronda, el grupo vota para
+              expulsar a un jugador sospechoso.
+            </p>
+          </div>
+
+          <div class="indcontainer">
+            <h3 class="secondtitle">
+              <i class="fa-solid fa-trophy"></i> Condiciones de Victoria
+            </h3>
+            <p class="subtext">
+              <strong>Ganan los Jugadores Normales:</strong> Si identifican y
+              expulsan a todos los blancos.
+            </p>
+            <p class="subtext">
+              <strong>Ganan los Blancos:</strong> Si sobreviven hasta el final o
+              si los jugadores normales se eliminan entre ellos.
+            </p>
+          </div>
+
+          <div class="indcontainer">
+            <h3 class="secondtitle">
+              <i class="fa-solid fa-lightbulb"></i> Consejos Estratégicos
+            </h3>
+            <p class="subtext">
+              <strong>Para Jugadores Normales:</strong> Den pistas específicas
+              pero no obvias. Observen quién da respuestas vagas o genéricas.
+            </p>
+            <p class="subtext">
+              <strong>Para los Blancos:</strong> Escuchen con atención las
+              primeras palabras. Sean creativos pero no demasiado específicos.
+              Mantengan la calma.
+            </p>
+          </div>
+
+          <div class="indcontainer">
+            <h3 class="secondtitle">
+              <i class="fa-solid fa-circle-info"></i> Reglas Importantes
+            </h3>
+            <p class="subtext">
+              • No se puede decir la palabra secreta directamente.
+            </p>
+            <p class="subtext">• Solo una palabra por turno.</p>
+            <p class="subtext">• Las votaciones son vinculantes.</p>
+            <p class="subtext">• ¡La comunicación y el engaño son claves!</p>
+          </div>
+
+          <button
+            class="button mainbutton"
+            onclick="backToHome()"
+            style="margin-bottom: 40px"
+          >
+            VOLVER AL INICIO
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="area">
+      <ul class="circles">
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+      </ul>
+    </div>
+  </body>
+  <script src="./assets/js/index.js"></script>
+</html>

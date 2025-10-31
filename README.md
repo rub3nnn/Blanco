@@ -11,7 +11,7 @@
 [![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-[🎮 **JUGAR AHORA**](https://blanco.vercel.app) | [📖 Documentación](#-instalación-y-configuración) | [🐛 Reportar Bug](https://github.com/rub3nnn/Blanco/issues)
+[🎮 **JUGAR AHORA**](https://blanco.rub3n.me) | [📖 Documentación](#-instalación-y-configuración) | [🐛 Reportar Bug](https://github.com/rub3nnn/Blanco/issues)
 
 </div>
 
@@ -21,7 +21,7 @@
 
 **¿Quieres jugar sin instalar nada?**
 
-👉 **[blanco.vercel.app](https://blanco.vercel.app)** 👈
+👉 **[blanco.rub3n.me](https://blanco.rub3n.me)** 👈
 
 ¡Abre el enlace en tu navegador y empieza a jugar al instante!
 

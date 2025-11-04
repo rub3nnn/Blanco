@@ -12,7 +12,7 @@ const server = http.createServer(app);
 // Allow connections from any origin (adjust this in production to your client domain)
 const io = socketIo(server, {
   cors: {
-    origin: "https://blanco.rub3n.me", // In production, change this to your client URL: "https://your-client-domain.com"
+    origin: "*", // In production, change this to your client URL: "https://your-client-domain.com"
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -338,6 +338,9 @@ io.on("connection", (socket) => {
       (p) => p !== randomword
     );
 
+    // Guardar blancos actuales para el sistema de votación
+    rooms[roomCode].currentBlancos = selectedBlancos;
+
     // Actualizar el estado del juego y emitir los datos correspondientes
     rooms[roomCode].gamestatus = "receivewords";
     let emitdata = {
@@ -350,6 +353,166 @@ io.on("connection", (socket) => {
 
     io.to(roomCode).emit("game", emitdata);
     evento.emit(roomCode, emitdata);
+  }
+
+  // Sistema de votaciones
+  socket.on("vote", (data) => {
+    const { roomCode, votedPlayerId } = data;
+    if (!rooms[roomCode]) return;
+
+    // Inicializar sistema de votos si no existe
+    if (!rooms[roomCode].votes) {
+      rooms[roomCode].votes = {};
+    }
+
+    // Registrar el voto
+    rooms[roomCode].votes[userId] = votedPlayerId;
+
+    console.log(
+      `${socket.username} ha votado a ${votedPlayerId} en la sala ${roomCode}`
+    );
+
+    // Emitir actualización de votos a todos en la sala
+    io.to(roomCode).emit("votesUpdate", {
+      votes: rooms[roomCode].votes,
+      players: rooms[roomCode].players,
+    });
+  });
+
+  // Finalizar votación (solo líder)
+  socket.on("endVoting", (data) => {
+    const { roomCode } = data;
+    if (!rooms[roomCode]) return;
+
+    // Verificar que el que finaliza es el líder
+    const currentPlayer = rooms[roomCode].players.find(
+      (p) => p.userId === userId
+    );
+    if (!currentPlayer || currentPlayer.role !== "leader") return;
+
+    const votes = rooms[roomCode].votes || {};
+
+    // Contar votos
+    const voteCount = {};
+    Object.values(votes).forEach((votedId) => {
+      voteCount[votedId] = (voteCount[votedId] || 0) + 1;
+    });
+
+    // Encontrar al jugador más votado
+    let maxVotes = 0;
+    let eliminatedPlayerId = null;
+    Object.entries(voteCount).forEach(([playerId, count]) => {
+      if (count > maxVotes) {
+        maxVotes = count;
+        eliminatedPlayerId = playerId;
+      }
+    });
+
+    // Eliminar al jugador más votado si hay votos
+    if (eliminatedPlayerId && maxVotes > 0) {
+      const eliminatedPlayer = rooms[roomCode].players.find(
+        (p) => p.userId === eliminatedPlayerId
+      );
+      const wasBlanco =
+        rooms[roomCode].currentBlancos &&
+        rooms[roomCode].currentBlancos.some(
+          (b) => b.userId === eliminatedPlayerId
+        );
+
+      // Remover jugador
+      rooms[roomCode].players = rooms[roomCode].players.filter(
+        (p) => p.userId !== eliminatedPlayerId
+      );
+
+      // Actualizar lista de blancos vivos
+      if (wasBlanco && rooms[roomCode].currentBlancos) {
+        rooms[roomCode].currentBlancos = rooms[roomCode].currentBlancos.filter(
+          (b) => b.userId !== eliminatedPlayerId
+        );
+      }
+
+      console.log(
+        `${eliminatedPlayer.username} ha sido eliminado de la sala ${roomCode}`
+      );
+
+      // Emitir eliminación
+      io.to(roomCode).emit("playerEliminated", {
+        player: eliminatedPlayer,
+        wasBlanco: wasBlanco,
+        votes: voteCount,
+      });
+
+      // Verificar condiciones de victoria
+      checkWinConditions(roomCode);
+    } else {
+      // No hubo votos o empate, continuar
+      io.to(roomCode).emit("noElimination", {
+        message: "No hubo eliminaciones en esta ronda",
+      });
+      prepareNextRound(roomCode);
+    }
+
+    // Limpiar votos
+    rooms[roomCode].votes = {};
+  });
+
+  // Verificar condiciones de victoria
+  function checkWinConditions(roomCode) {
+    if (!rooms[roomCode]) return;
+
+    const players = rooms[roomCode].players;
+    const blancos = rooms[roomCode].currentBlancos || [];
+    const blancosVivos = blancos.filter((b) =>
+      players.some((p) => p.userId === b.userId)
+    );
+    const normalesVivos = players.filter(
+      (p) => !blancosVivos.some((b) => b.userId === p.userId)
+    );
+
+    // Victoria de jugadores normales (eliminaron todos los blancos)
+    if (blancosVivos.length === 0) {
+      rooms[roomCode].gamestatus = "end";
+      io.to(roomCode).emit("game", {
+        state: "gameOver",
+        winner: "normales",
+        message:
+          "¡Los jugadores normales han ganado! Eliminaron a todos los blancos.",
+      });
+      console.log(
+        `Partida terminada en sala ${roomCode}: Ganaron los normales`
+      );
+      return;
+    }
+
+    // Victoria de blancos (igualan o superan a los normales)
+    if (blancosVivos.length >= normalesVivos.length) {
+      rooms[roomCode].gamestatus = "end";
+      io.to(roomCode).emit("game", {
+        state: "gameOver",
+        winner: "blancos",
+        message: "¡Los blancos han ganado! Alcanzaron la mayoría.",
+        blancos: blancosVivos,
+      });
+      console.log(`Partida terminada en sala ${roomCode}: Ganaron los blancos`);
+      return;
+    }
+
+    // Si nadie ganó, preparar siguiente ronda
+    prepareNextRound(roomCode);
+  }
+
+  // Preparar siguiente ronda
+  function prepareNextRound(roomCode) {
+    if (!rooms[roomCode]) return;
+
+    setTimeout(() => {
+      io.to(roomCode).emit("game", {
+        state: "nextRound",
+        message: "Preparando siguiente ronda...",
+        currentBlancos: rooms[roomCode].currentBlancos,
+        remainingPlayers: rooms[roomCode].players,
+      });
+    }, 3000);
   }
 
   socket.on("leaveRoom", () => {

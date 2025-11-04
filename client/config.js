@@ -3,7 +3,8 @@
 
 const CONFIG = {
   // For local development
-  SERVER_URL: "https://blanco-bhqw.onrender.com/",
+  SERVER_URL: "http://localhost:8080",
+  //SERVER_URL: "https://blanco-bhqw.onrender.com/",
 
   // For production, uncomment and set your server URL:
   // SERVER_URL: "https://your-server-domain.com",

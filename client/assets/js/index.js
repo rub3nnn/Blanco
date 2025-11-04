@@ -188,30 +188,104 @@ function gamestatefunction(data) {
 
       break;
     case "receivewords":
-      if (role === "leader") {
-        document.getElementById("skipround").style.display = "flex";
+      // Ocultar botón de skip round del líder
+      if (document.getElementById("skipround")) {
+        document.getElementById("skipround").style.display = "none";
       }
-      if (role === "leader" && roomsettings.wordwrite === "onlyleader") {
-        gamesection.innerHTML = `
-                <div class="contextcontainer">
-                    <p class="text">JUEGO EN CURSO</p>
-                    <p class="subtext">PALABRA ACTUAL</p>
-                    <p class="subtext">${data.data.word}</p>
-                </div>
-                `;
-      } else if (data.data.blancos.some((user) => user.userId === userId)) {
-        gamesection.innerHTML = `
-                <p class="secondtitle">ERES BLANCO</p>
-                `;
-      } else {
-        gamesection.innerHTML = `
-                <p class="secondtitle">ERES UN JUGADOR NORMAL</p>
-                <div class="contextcontainer">
-                    <p class="subtext">LA PALABRA ES:</p>
-                    <p class="text">${data.data.word}</p>
-                </div>
-                `;
-      }
+
+      // Determinar si el jugador es blanco
+      const isBlanco = data.data.blancos.some((user) => user.userId === userId);
+      const word = data.data.word;
+
+      // Guardar palabra actual
+      window.currentWord = word;
+
+      // Crear interfaz de juego con palabra y votaciones
+      gamesection.innerHTML = `
+        <div class="game-header">
+          ${
+            isBlanco
+              ? '<p class="role-title blanco-role">ERES BLANCO</p>'
+              : '<p class="role-title normal-role">ERES JUGADOR NORMAL</p>'
+          }
+          ${
+            !isBlanco
+              ? `
+            <div class="word-container">
+              <button class="toggle-word-btn" id="toggleWordBtn" onclick="toggleWord()">
+                <i class="fa-solid fa-eye"></i> MOSTRAR PALABRA
+              </button>
+              <div class="word-display hidden" id="wordDisplay">
+                <p class="subtext">LA PALABRA ES:</p>
+                <p class="text word-text">${word}</p>
+              </div>
+            </div>
+          `
+              : ""
+          }
+        </div>
+        
+        <div class="voting-section">
+          <p class="subtext voting-title">VOTACIÓN - Selecciona a quien expulsar:</p>
+          <div class="players-voting-list" id="playersVotingList"></div>
+          <div class="votes-display" id="votesDisplay">
+            <p class="subtext">Votos en tiempo real:</p>
+            <div id="votesContent"></div>
+          </div>
+          ${
+            role === "leader"
+              ? '<button class="button end-voting-btn" id="endVotingBtn" onclick="endVoting()">FINALIZAR VOTACIÓN</button>'
+              : '<p class="subtext">Esperando a que el líder finalice la votación...</p>'
+          }
+        </div>
+      `;
+
+      // Cargar lista de jugadores para votar
+      loadVotingPlayers(data.data.blancos);
+      break;
+    case "nextRound":
+      gamesection.innerHTML = `
+        <div class="contextcontainer">
+          <p class="text">SIGUIENTE RONDA</p>
+          <p class="subtext">${data.message}</p>
+        </div>
+      `;
+      // Volver a mostrar la palabra después de 3 segundos
+      setTimeout(() => {
+        if (data.currentBlancos && data.remainingPlayers) {
+          gamestatefunction({
+            state: "receivewords",
+            data: {
+              word: window.currentWord,
+              blancos: data.currentBlancos,
+            },
+          });
+        }
+      }, 3000);
+      break;
+    case "gameOver":
+      document.getElementById("skipround").style.display = "none";
+      gamesection.innerHTML = `
+        <div class="game-over-container">
+          <p class="text">${
+            data.winner === "normales" ? "¡VICTORIA!" : "¡DERROTA!"
+          }</p>
+          <p class="secondtitle">${data.message}</p>
+          ${
+            data.blancos
+              ? `
+            <div class="contextcontainer">
+              <p class="subtext">Los blancos eran:</p>
+              ${data.blancos
+                .map((b) => `<p class="subtext">${b.username}</p>`)
+                .join("")}
+            </div>
+          `
+              : ""
+          }
+          <button class="button" onclick="backToLobby()">VOLVER AL LOBBY</button>
+        </div>
+      `;
       break;
     case "end":
       document.getElementById("skipround").style.display = "none";
@@ -720,6 +794,171 @@ function shareLink() {
     copyToClipboard(link);
   }
 }
+
+// ========== SISTEMA DE VOTACIONES ==========
+
+let currentVote = null;
+window.currentWord = null;
+
+// Mostrar/ocultar palabra
+window.toggleWord = function toggleWord() {
+  const wordDisplay = document.getElementById("wordDisplay");
+  const toggleBtn = document.getElementById("toggleWordBtn");
+
+  if (wordDisplay.classList.contains("hidden")) {
+    wordDisplay.classList.remove("hidden");
+    toggleBtn.innerHTML =
+      '<i class="fa-solid fa-eye-slash"></i> OCULTAR PALABRA';
+  } else {
+    wordDisplay.classList.add("hidden");
+    toggleBtn.innerHTML = '<i class="fa-solid fa-eye"></i> MOSTRAR PALABRA';
+  }
+};
+
+// Cargar lista de jugadores para votar
+function loadVotingPlayers(blancos) {
+  const playersVotingList = document.getElementById("playersVotingList");
+  if (!playersVotingList) return;
+
+  playersVotingList.innerHTML = "";
+
+  // Filtrar jugadores vivos (excluir al jugador actual)
+  const votablePlayers = window.playerlist.filter((p) => p.userId !== userId);
+
+  votablePlayers.forEach((player) => {
+    const isBlanco = blancos.some((b) => b.userId === player.userId);
+    playersVotingList.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div class="player-vote-item ${
+        currentVote === player.userId ? "voted" : ""
+      }" 
+           id="vote-${player.userId}" 
+           onclick="votePlayer('${player.userId}', '${player.username}')">
+        <p class="subtext">${player.username}</p>
+        <div class="vote-indicator" id="indicator-${player.userId}">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+      </div>
+      `
+    );
+  });
+}
+
+// Votar a un jugador
+window.votePlayer = function votePlayer(playerId, playerName) {
+  // Actualizar voto actual
+  currentVote = playerId;
+
+  // Actualizar UI
+  document.querySelectorAll(".player-vote-item").forEach((item) => {
+    item.classList.remove("voted");
+  });
+  document.getElementById(`vote-${playerId}`).classList.add("voted");
+
+  // Enviar voto al servidor
+  socket.emit("vote", {
+    roomCode: currentRoom,
+    votedPlayerId: playerId,
+  });
+
+  console.log(`Votaste a ${playerName}`);
+};
+
+// Finalizar votación (solo líder)
+window.endVoting = function endVoting() {
+  if (role !== "leader") return;
+
+  socket.emit("endVoting", {
+    roomCode: currentRoom,
+  });
+};
+
+// Recibir actualizaciones de votos en tiempo real
+socket.on("votesUpdate", (data) => {
+  const { votes, players } = data;
+  const votesContent = document.getElementById("votesContent");
+  if (!votesContent) return;
+
+  votesContent.innerHTML = "";
+
+  // Contar votos por jugador
+  const voteCount = {};
+  Object.entries(votes).forEach(([voterId, votedId]) => {
+    if (!voteCount[votedId]) {
+      voteCount[votedId] = [];
+    }
+    const voter = players.find((p) => p.userId === voterId);
+    if (voter) {
+      voteCount[votedId].push(voter.username);
+    }
+  });
+
+  // Mostrar votos
+  Object.entries(voteCount).forEach(([playerId, voters]) => {
+    const player = players.find((p) => p.userId === playerId);
+    if (player) {
+      votesContent.insertAdjacentHTML(
+        "beforeend",
+        `
+        <div class="vote-count-item">
+          <p class="subtext"><strong>${player.username}</strong>: ${
+          voters.length
+        } voto(s)</p>
+          <p class="vote-details">${voters.join(", ")}</p>
+        </div>
+        `
+      );
+    }
+  });
+
+  if (Object.keys(voteCount).length === 0) {
+    votesContent.innerHTML = '<p class="subtext">Aún no hay votos...</p>';
+  }
+});
+
+// Jugador eliminado
+socket.on("playerEliminated", (data) => {
+  const { player, wasBlanco, votes } = data;
+
+  gamesection.innerHTML = `
+    <div class="elimination-container">
+      <p class="text">JUGADOR ELIMINADO</p>
+      <p class="secondtitle">${player.username}</p>
+      <p class="subtext">${
+        wasBlanco ? "¡ERA UN BLANCO!" : "Era un jugador normal"
+      }</p>
+      <div class="votes-result">
+        <p class="subtext">Votos recibidos: ${votes[player.userId] || 0}</p>
+      </div>
+      <p class="subtext">Preparando siguiente ronda...</p>
+    </div>
+  `;
+});
+
+// Sin eliminación
+socket.on("noElimination", (data) => {
+  gamesection.innerHTML = `
+    <div class="contextcontainer">
+      <p class="text">SIN ELIMINACIÓN</p>
+      <p class="subtext">${data.message}</p>
+    </div>
+  `;
+});
+
+// Volver al lobby después de game over
+window.backToLobby = function backToLobby() {
+  gamesection.style.opacity = 0;
+  setTimeout(() => {
+    gamesection.style.display = "none";
+    createsection.style.display = "block";
+    createsection.style.opacity = 0;
+    frontpage.classList.add("subcontainer");
+    setTimeout(() => {
+      createsection.style.opacity = 1;
+    }, 300);
+  }, 300);
+};
 
 function copyToClipboard(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {

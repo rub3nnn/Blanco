@@ -294,6 +294,7 @@ export default function App() {
   const [selectedCategories, setSelectedCategories] = useState([
     "Comida y Bebida",
     "Animales",
+    "Objetos",
   ]);
   const [impostorCount, setImpostorCount] = useState(1);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
@@ -343,6 +344,7 @@ export default function App() {
         Música: "musica",
         Videojuegos: "videojuegos",
         Marcas: "marcas",
+        Futbolistas: "futbolistas",
       };
 
       const loadedWords = {};
@@ -351,8 +353,12 @@ export default function App() {
         try {
           const response = await import(`./data/es-es/${fileName}.json`);
           loadedWords[category] = response.default;
+          console.log(`Loaded ${category}:`, response.default?.length, "words");
         } catch (error) {
-          console.error(`Error cargando ${fileName}.json:`, error);
+          console.error(
+            `❌ Error cargando ${fileName}.json para ${category}:`,
+            error
+          );
           loadedWords[category] = [];
         }
       }
@@ -375,6 +381,7 @@ export default function App() {
     { name: "Música", icon: Music },
     { name: "Videojuegos", icon: Gamepad2 },
     { name: "Marcas", icon: ShoppingBag },
+    { name: "Futbolistas", icon: Trophy },
   ];
 
   // Función para obtener una palabra aleatoria de una categoría
@@ -607,6 +614,14 @@ export default function App() {
                 <p className="text-blue-200/60 text-sm font-medium mt-3 tracking-widest uppercase">
                   Encuentra al impostor
                 </p>
+                <div className="mt-4 flex items-center gap-2 justify-center">
+                  <span className="text-blue-300/80 text-xs font-semibold">
+                    v1.0
+                  </span>
+                  <span className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                    Beta
+                  </span>
+                </div>
               </div>
 
               <div className="w-full max-w-xs space-y-3 z-10">
@@ -641,9 +656,6 @@ export default function App() {
                 </button>
               </div>
             </div>
-            <div className="p-6 text-center text-white/20 text-xs font-mono">
-              v2.1 Mobile Logic
-            </div>
           </div>
         )}
 
@@ -654,7 +666,7 @@ export default function App() {
               title="Cómo Jugar"
               onBack={() => setCurrentScreen("menu")}
             />
-            <div className="flex-1 overflow-y-auto p-5 space-y-3 pb-24">
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
               {[
                 {
                   icon: Target,
@@ -664,7 +676,7 @@ export default function App() {
                 {
                   icon: Users,
                   title: "Roles",
-                  text: "Inocentes conocen la palabra. Impostor solo conoce la categoría.",
+                  text: "Inocentes conocen la palabra. Impostor no conoce la palabra secreta.",
                 },
                 {
                   icon: Play,
@@ -675,6 +687,16 @@ export default function App() {
                   icon: Trophy,
                   title: "Votación",
                   text: "Debatid y votad para expulsar al sospechoso.",
+                },
+                {
+                  icon: Eye,
+                  title: "Revelar Categoría",
+                  text: "Hace visible para el impostor de qué categoría es la palabra secreta.",
+                },
+                {
+                  icon: HelpCircle,
+                  title: "Revelar Pista",
+                  text: "Da una pista muy grande al impostor sobre la palabra. Recomendado para grupos pequeños donde hay poca oportunidad de deducción.",
                 },
               ].map((item, i) => (
                 <GlassCard
@@ -713,7 +735,7 @@ export default function App() {
                   <h3 className="text-sm font-bold text-blue-200 uppercase tracking-wider flex items-center gap-2">
                     <Users className="w-4 h-4" /> Jugadores{" "}
                     <span className="bg-white/10 text-white px-2 py-0.5 rounded-md text-xs">
-                      {players.length}/10
+                      {players.length}
                     </span>
                   </h3>
                 </div>
@@ -731,7 +753,7 @@ export default function App() {
                     />
                     <button
                       onClick={addPlayer}
-                      disabled={!newPlayerName.trim() || players.length >= 10}
+                      disabled={!newPlayerName.trim()}
                       className="bg-blue-600 text-white w-12 rounded-xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition shadow-lg hover:bg-blue-500"
                     >
                       <Plus className="w-6 h-6" />
@@ -1190,6 +1212,27 @@ export default function App() {
                           {currentRound}
                         </span>
                       </p>
+
+                      {!innocentsWon && (
+                        <>
+                          <div className="w-full h-px bg-white/10 my-4"></div>
+                          <p className="text-white/40 text-xs uppercase font-bold mb-2 tracking-widest">
+                            {gameData.impostorIndices.length > 1
+                              ? "Los Impostores"
+                              : "El Impostor"}
+                          </p>
+                          <div className="flex flex-wrap gap-2 justify-around">
+                            {gameData.impostorIndices.map((idx) => (
+                              <span
+                                key={idx}
+                                className="bg-red-500/20 border border-red-500/30 text-red-300 px-3 py-1.5 rounded-lg text-sm font-bold"
+                              >
+                                {gameData.players[idx]}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </GlassCard>
 
                     <div className="flex gap-3 w-full max-w-sm">
@@ -1300,7 +1343,7 @@ export default function App() {
       </div>
 
       {/* Global Styles */}
-      <style jsx>{`
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }

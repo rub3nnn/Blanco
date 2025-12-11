@@ -655,6 +655,10 @@ export default function App() {
                   </div>
                 </button>
               </div>
+
+              <div className="mt-8 flex justify-center items-center opacity-30 hover:opacity-50 transition-opacity">
+                <img src="/icon.png" alt="BLANCO" className="w-16 h-16" />
+              </div>
             </div>
           </div>
         )}

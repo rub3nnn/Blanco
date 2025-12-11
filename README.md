@@ -2,6 +2,8 @@
 
 <div align="center">
 
+<img src="./public/icon.png" alt="BLANCO Icon" width="120" height="120" />
+
 ![Version](https://img.shields.io/badge/version-1.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-beta-yellow.svg)
 ![React](https://img.shields.io/badge/React-19.1-61DAFB?logo=react)

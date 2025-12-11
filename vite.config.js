@@ -13,11 +13,6 @@ export default defineConfig({
       // Estrategia de actualización
       registerType: "autoUpdate",
 
-      // Configuración para desarrollo (opcional, útil para probar)
-      devOptions: {
-        enabled: true,
-      },
-
       // Archivos a incluir en la precarga (offline)
       includeAssets: ["icon.png"],
 
@@ -26,7 +21,9 @@ export default defineConfig({
         name: "Blanco - El impostor",
         short_name: "Blanco",
         description: "Descubre al impostor entre los jugadores.",
-        theme_color: "#ffffff",
+        theme_color: "#0f172a",
+        background_color: "#0f172a",
+        display: "standalone",
         icons: [
           {
             src: "logo-192x192.png",

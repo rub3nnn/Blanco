@@ -83,7 +83,7 @@ const ExpulsionScreen = ({ gameData, votedPlayer, onContinue, isGameEnd }) => {
   }, [isGameEnd, onContinue]);
 
   return (
-    <div className="flex flex-col h-screen animate-fadeIn">
+    <div className="flex flex-col h-dvh animate-fadeIn">
       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
         <div className="relative mb-8">
           <div
@@ -315,9 +315,37 @@ export default function App() {
     const saved = localStorage.getItem("blanco-used-words");
     return saved ? JSON.parse(saved) : {};
   });
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   // Auto-scroll ref
   const playerListRef = useRef(null);
+
+  // Detectar si la PWA puede instalarse
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+
+      // Verificar si ya se instaló la PWA
+      const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone;
+
+      if (!isStandalone) {
+        setShowInstallModal(true);
+      }
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt
+      );
+    };
+  }, []);
 
   // Guardar jugadores en localStorage cuando cambien
   useEffect(() => {
@@ -587,8 +615,26 @@ export default function App() {
     cat.name.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+
+    if (outcome === "accepted") {
+      console.log("PWA instalada");
+    }
+
+    setDeferredPrompt(null);
+    setShowInstallModal(false);
+  };
+
+  const handleDismissInstall = () => {
+    setShowInstallModal(false);
+  };
+
   return (
-    <div className="relative w-full h-full min-h-screen overflow-hidden bg-slate-900 font-sans selection:bg-blue-500/30 flex items-center justify-center">
+    <div className="relative w-full h-full min-h-dvh overflow-hidden bg-slate-900 font-sans selection:bg-blue-500/30 flex items-center justify-center">
       {/* --- FONDO ANIMADO --- */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 bg-[#0f172a]">
         <div className="absolute top-[-20%] left-[-20%] w-[80vw] h-[80vw] bg-blue-600/20 rounded-full blur-[100px] animate-blob mix-blend-screen"></div>
@@ -598,10 +644,10 @@ export default function App() {
       </div>
 
       {/* --- CONTENIDO PRINCIPAL --- */}
-      <div className="relative z-10 w-full h-full flex flex-col max-w-[480px] mx-auto bg-slate-900 shadow-2xl md:h-screen md:max-h-[932px] md:rounded-[3rem] md:border-8 md:border-slate-950">
+      <div className="relative z-10 w-full h-full flex flex-col max-w-[480px] mx-auto bg-slate-900 shadow-2xl md:h-dvh md:max-h-[932px] md:rounded-[3rem] md:border-8 md:border-slate-950">
         {/* MENU */}
         {currentScreen === "menu" && (
-          <div className="flex flex-col h-screen animate-fadeIn">
+          <div className="flex flex-col h-dvh animate-fadeIn">
             <div className="flex-1 flex flex-col justify-center items-center px-6 relative">
               <div className="mb-12 text-center relative z-10">
                 <div className="inline-block relative">
@@ -665,7 +711,7 @@ export default function App() {
 
         {/* INSTRUCTIONS */}
         {currentScreen === "instructions" && (
-          <div className="flex flex-col h-screen animate-slideIn">
+          <div className="flex flex-col h-dvh animate-slideIn">
             <Header
               title="Cómo Jugar"
               onBack={() => setCurrentScreen("menu")}
@@ -726,7 +772,7 @@ export default function App() {
 
         {/* SETUP */}
         {currentScreen === "local-setup" && (
-          <div className="flex flex-col h-screen animate-slideIn">
+          <div className="flex flex-col h-dvh animate-slideIn">
             <Header
               title="Configuración"
               onBack={() => setCurrentScreen("menu")}
@@ -972,7 +1018,7 @@ export default function App() {
 
         {/* ROLE REVEAL (HOLD TO REVEAL) */}
         {currentScreen === "role-reveal" && (
-          <div className="flex flex-col h-screen animate-fadeIn bg-slate-900">
+          <div className="flex flex-col h-dvh animate-fadeIn bg-slate-900">
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center perspective-container">
               <div
                 className={`w-full transition-all duration-400 ${
@@ -1025,7 +1071,7 @@ export default function App() {
 
         {/* GAME PLAY - DEBATE */}
         {currentScreen === "debate" && (
-          <div className="flex flex-col h-screen animate-slideIn">
+          <div className="flex flex-col h-dvh animate-slideIn">
             <Header
               title={`Ronda ${currentRound}`}
               rightElement={
@@ -1104,7 +1150,7 @@ export default function App() {
 
         {/* VOTING */}
         {currentScreen === "voting" && (
-          <div className="flex flex-col h-screen animate-slideIn">
+          <div className="flex flex-col h-dvh animate-slideIn">
             <Header title="Votación" />
             <div className="flex-1 overflow-y-auto p-5">
               <div className="text-center mb-8">
@@ -1162,7 +1208,7 @@ export default function App() {
 
         {/* GAME END */}
         {currentScreen === "game-end" && gameData && (
-          <div className="flex flex-col h-screen animate-fadeIn">
+          <div className="flex flex-col h-dvh animate-fadeIn">
             <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
               {(() => {
                 const aliveRoles = alivePlayers.map(
@@ -1340,6 +1386,45 @@ export default function App() {
                 >
                   Listo
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* INSTALL PWA MODAL */}
+        {showInstallModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-blue-500/30 w-full max-w-sm rounded-3xl overflow-hidden animate-scaleIn shadow-2xl shadow-blue-500/20">
+              <div className="p-8 text-center">
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 blur-2xl opacity-30 bg-blue-500 animate-pulse"></div>
+                  <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center relative z-10 shadow-xl border-2 border-blue-400/50">
+                    <img src="/icon.png" alt="BLANCO" className="w-14 h-14" />
+                  </div>
+                </div>
+
+                <h2 className="text-2xl font-black text-white mb-3 tracking-tight">
+                  Instala BLANCO
+                </h2>
+                <p className="text-blue-200/70 text-sm leading-relaxed mb-6">
+                  Para una mejor experiencia, instala la aplicación en tu
+                  dispositivo y juega sin conexión.
+                </p>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={handleInstallClick}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition hover:shadow-blue-500/40 border border-white/10"
+                  >
+                    Instalar Ahora
+                  </button>
+                  <button
+                    onClick={handleDismissInstall}
+                    className="w-full bg-white/5 border border-white/10 text-white/70 font-semibold py-3 rounded-2xl active:scale-95 transition hover:bg-white/10 hover:text-white"
+                  >
+                    Tal vez después
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -588,7 +588,7 @@ export default function App() {
   );
 
   return (
-    <div className="relative w-full h-full min-h-screen overflow-hidden bg-slate-900 font-sans selection:bg-blue-500/30">
+    <div className="relative w-full h-full min-h-screen overflow-hidden bg-slate-900 font-sans selection:bg-blue-500/30 flex items-center justify-center">
       {/* --- FONDO ANIMADO --- */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 bg-[#0f172a]">
         <div className="absolute top-[-20%] left-[-20%] w-[80vw] h-[80vw] bg-blue-600/20 rounded-full blur-[100px] animate-blob mix-blend-screen"></div>
@@ -598,7 +598,7 @@ export default function App() {
       </div>
 
       {/* --- CONTENIDO PRINCIPAL --- */}
-      <div className="relative z-10 w-full h-full flex flex-col">
+      <div className="relative z-10 w-full h-full flex flex-col max-w-[480px] mx-auto bg-slate-900 shadow-2xl md:h-screen md:max-h-[932px] md:rounded-[3rem] md:border-8 md:border-slate-950">
         {/* MENU */}
         {currentScreen === "menu" && (
           <div className="flex flex-col h-screen animate-fadeIn">

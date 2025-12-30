@@ -500,8 +500,8 @@ export default function App() {
         return;
       }
 
-      // Mantener el orden original de los jugadores
-      const gamePlayers = [...players];
+      // Barajar el orden de los jugadores aleatoriamente
+      const gamePlayers = [...players].sort(() => Math.random() - 0.5);
 
       // Seleccionar impostores aleatorios
       const impostorIndices = [];
@@ -546,8 +546,10 @@ export default function App() {
         setIsCardTransitioning(false);
       }, 400);
     } else {
-      // Determinar quién empieza el debate (primer jugador vivo)
-      setDebateStartPlayer(alivePlayers[0]);
+      // Determinar quién empieza el debate (jugador vivo aleatorio)
+      const randomStartPlayer =
+        alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+      setDebateStartPlayer(randomStartPlayer);
       setCurrentScreen("debate");
     }
   };
@@ -584,7 +586,9 @@ export default function App() {
 
     // Continuar a siguiente ronda
     setCurrentRound(currentRound + 1);
-    setDebateStartPlayer(newAlivePlayers[0]);
+    const randomStartPlayer =
+      newAlivePlayers[Math.floor(Math.random() * newAlivePlayers.length)];
+    setDebateStartPlayer(randomStartPlayer);
     setVotedPlayer(null);
     setCurrentScreen("debate");
   };

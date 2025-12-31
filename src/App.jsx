@@ -1317,7 +1317,6 @@ export default function App() {
               <div className="p-5 border-b border-white/10 flex items-center gap-3">
                 <Search className="w-5 h-5 text-gray-400" />
                 <input
-                  autoFocus
                   type="text"
                   placeholder="Buscar categorías..."
                   className="flex-1 outline-none text-lg bg-transparent text-white placeholder-gray-500"
